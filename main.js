@@ -2,18 +2,31 @@
 
 const SHA256 = require('crypto-js/sha256');
 
+class BeanInformation {
+    constructor(id, originCountry, originFarm, harvestDate, processMethod, location, roastDate, roaster, roasterNotes) {
+        this.id = id;
+        this.originCountry = originCountry;
+        this.originFarm = originFarm;
+        this.harvestDate = harvestDate;
+        this.processMethod = processMethod;
+        this.location = location;
+        this.roastDate = roastDate;
+        this.roaster = roaster;
+        this.roasterNotes = roasterNotes;
+    }
+}
+
 class Block {
-    constructor(index, timestamp, data, previousHash = ''){
-        this.index = index;
+    constructor(timestamp, beanInformation, previousHash = ''){
         this.timestamp = timestamp;
-        this.data = data;
+        this.beanInformation = beanInformation;
         this.previousHash = previousHash;
         this.hash = this.calculateHash();
         this.nonce = 0;
     }
 
     calculateHash() {
-        return SHA256((this.index * 23).toString() + this.previousHash + this.timestamp + JSON.stringify(this.data) + this.nonce).toString();
+        return SHA256(this.previousHash + this.timestamp + JSON.stringify(this.beanInformation) + this.nonce).toString();
     }
 
     mineBlock(difficulty) {
@@ -30,10 +43,37 @@ class BlockChain {
     constructor() {
         this.chain = [this.createGenesisBlock()];
         this.difficulty = 4;
+        this.pendingEntries = [];
     }
 
     createGenesisBlock() {
-        return new Block(0, "31/07/2018", "Genesis Block", "0");
+        return new Block("31/07/2018", "Genesis Block", "0");
+    }
+
+    minePendingEntries() {
+        let block = new Block(Date.now(), this.pendingEntries);
+        block.mineBlock(this.difficulty);
+
+        console.log("Block mined successfully.");
+        this.chain.push(block);
+
+        this.pendingEntries = [];
+        // no mining reward in this small example
+    }
+
+    createEntry(beanInformation) {
+        this.pendingEntries.push(beanInformation);
+    }
+
+    getBeanInformation(id) {
+        for (const block of this.chain) {
+            for (const beanInformation of block.beanInformation) {
+                if (beanInformation.id === id) {
+                    console.log(Array(40).join("-"));
+                    console.log(beanInformation);
+                }
+            }
+        }
     }
 
     getLatestBlock() {
@@ -66,10 +106,11 @@ class BlockChain {
 
 let beantrail = new BlockChain();
 
-console.log("Mining block 1...");
-beantrail.addBlock(new Block(1, "10/08/2018", {farmName: "Piri Ungo", currentLocation: "Africa"}));
+beantrail.createEntry(new BeanInformation("RWA-482:9g7", "Ruanda", "Rowo", "20/09/2017", null, "Rwanda", null, null, null));
+beantrail.createEntry(new BeanInformation("RWA-482:9g7", "Ruanda", "Rowo", "20/09/2017", "washed", "Morocco", null, null, null));
+beantrail.createEntry(new BeanInformation("RWA-482:9g7", "Ruanda", "Rowo", "20/09/2017", "washed", "The Netherlands", null, null, null));
+beantrail.createEntry(new BeanInformation("RWA-482:9g7", "Ruanda", "Rowo", "20/09/2017", "washed", "The Netherlands", "13/11/2017", "The Black Raven", "Notes of cherry, vanilla and salted charamel"));
+beantrail.createEntry(new BeanInformation("RWA-482:9g7", "Ruanda", "Rowo", "20/09/2017", "washed", "Budapest", "13/11/2017", "The Black Raven", "Notes of cherry, vanilla and salted charamel"));
 
-console.log("Mining block 2...");
-beantrail.addBlock(new Block(2, "20/08/2018", {farmName: "Piri Ungo", currentLocation: "Morocco"}));
-
-console.log(JSON.stringify(beantrail, null, 4));
+beantrail.minePendingEntries();
+beantrail.getBeanInformation("RWA-482:9g7");
